@@ -43,7 +43,7 @@ footer{grid-column:1/4;background:#151b24;border-top:1px solid #26303c;padding:3
 <div class="pane" id="p5"><div id="dupes"></div></div>
 <div class="pane" id="p4"><div id="edit"></div></div>
 <div class="pane" id="p3"><input id="search" placeholder="search titles, descriptions, notes, flags, #id" style="width:100%"><div id="roomlist"></div><h4>Areas</h4><div id="arealist"></div></div></div>
-<div id="mapwrap"><div id="maptool"><button id="modeBtn">Area view</button><button class="wonly" id="expBtn">Expand/Collapse</button><label class="wonly" style="white-space:nowrap"><input type="checkbox" id="showSub"> sub-areas</label><button class="wonly" id="colAll">Collapse all</button><button class="wonly" id="expAll">Expand all</button><button id="collHere" title="shrink this area to a tile">Shrink to tile</button><button id="undoBtn">Undo</button><label style="white-space:nowrap" title="colour the rooms the last import added"><input type="checkbox" id="showNew" checked> new</label><button id="zdn">▼</button><button id="zup">▲</button><button id="fit">Fit</button><button id="hereBtn">Find me</button><span id="pickbar" style="display:none;color:#ffd86b"></span><span id="zlabel" class="dim"></span></div><canvas id="map"></canvas></div>
+<div id="mapwrap"><div id="maptool"><button id="modeBtn">Area view</button><button class="wonly" id="expBtn">Expand/Collapse</button><label class="wonly" style="white-space:nowrap"><input type="checkbox" id="showSub"> sub-areas</label><button class="wonly" id="colAll">Collapse all</button><button class="wonly" id="expAll">Expand all</button><button id="collHere" title="shrink this area to a tile">Shrink to tile</button><button id="undoBtn">Undo</button><label style="white-space:nowrap" title="blue = rooms the last import added (untick to hide). Green = INN/peace rooms, gold = shops/banks, red = danger"><input type="checkbox" id="showNew" checked> new</label><button id="zdn">▼</button><button id="zup">▲</button><button id="fit">Fit</button><button id="hereBtn">Find me</button><span id="pickbar" style="display:none;color:#ffd86b"></span><span id="zlabel" class="dim"></span></div><canvas id="map"></canvas></div>
 <div id="walker"><div id="out"></div>
 <div class="pad"><button data-c="up">U</button><button data-c="n">N</button><button data-c="down">D</button><button data-c="w">W</button><button data-c="s">S</button><button data-c="e">E</button></div>
 <input id="cmd" placeholder="type a command (help)" autocomplete="off"></div>
@@ -1133,7 +1133,7 @@ function focus(r) { setMode('area'); S.area = r.area; S.z = r.z; const W = cv.wi
 const FLAG_MAIN = ['INN', 'SHOP', 'BANK', 'VAULT', 'DUMP', 'RANK', 'PEACE', 'DT', 'NO_MAGIC', 'NO_RECALL', 'NO_LOCATE', 'RECUPERATE', 'PORTAL', 'DONT_SPEEDWALK', 'MERCHANT', 'GENERAL_STORE', 'FLETCHER', 'MAZE'];
 const FLAG_MORE = ['CLERIC_STUDY', 'DRUID_STUDY', 'MAGE_STUDY', 'BARBARIAN_GUILD', 'CLERIC_GUILD', 'DARK_KNIGHT_GUILD', 'DRUID_GUILD', 'MAGE_GUILD', 'PALADIN_GUILD', 'SCOUT_GUILD', 'SHAMAN_GUILD', 'THIEF_GUILD', 'WARRIOR_GUILD', 'AGGRO', 'AGGRO_GOOD', 'AGGRO_EVIL', 'AGGRO_NEUTRAL', 'SPIN', 'ORDERED'];
 const flagFill = r => { const f = r.flags || {}; return f.DT ? '#a01e1e' : (f.PEACE || f.INN) ? '#237346' : (f.SHOP || f.BANK || f.VAULT || f.MERCHANT || f.GENERAL_STORE) ? '#826923' : null; };
-const roomFill = r => S.multi.has(r) ? '#ff9f43' : r === S.sel ? '#ffd86b' : (S.showNew && S.newRooms.has(r)) ? '#3fbf6f' : (flagFill(r) || '#1f6f6b');
+const roomFill = r => S.multi.has(r) ? '#ff9f43' : r === S.sel ? '#ffd86b' : (S.showNew && S.newRooms.has(r)) ? '#2f7fd6' : (flagFill(r) || '#1f6f6b');
 const pos = r => { const o = flatOff(r); return [(r.x + (o ? o[0] : 0)) * S.view.s + S.view.ox, (r.y + (o ? o[1] : 0)) * S.view.s + S.view.oy]; };
 function draw() {
   if (S.mode === 'world') { drawWorld(); drawBox(); return; }
@@ -1479,7 +1479,7 @@ function drawWorld() {
     if (hiddenSub(n)) continue;
     const m = metaOf(n); const cx = m.tx * s + v.ox, cy = m.ty * s + v.oy;
     if (m.collapsed) {
-      const w = TW * s, h = TH * s; const hasNew = S.showNew && S.newRooms.size && rs.some(r => S.newRooms.has(r)) && S.pre && S.pre.areas.length; g.fillStyle = n === S.selArea ? '#4d6a2a' : '#1c4a57'; g.strokeStyle = n === S.selArea ? '#ffd86b' : (hasNew ? '#3fbf6f' : '#4fb3c4'); g.lineWidth = n === S.selArea ? 2.5 : 1.2;
+      const w = TW * s, h = TH * s; const hasNew = S.showNew && S.newRooms.size && rs.some(r => S.newRooms.has(r)) && S.pre && S.pre.areas.length; g.fillStyle = n === S.selArea ? '#4d6a2a' : '#1c4a57'; g.strokeStyle = n === S.selArea ? '#ffd86b' : (hasNew ? '#4aa3ff' : '#4fb3c4'); g.lineWidth = n === S.selArea ? 2.5 : 1.2;
       g.beginPath(); g.roundRect ? g.roundRect(cx - w / 2, cy - h / 2, w, h, 4) : g.rect(cx - w / 2, cy - h / 2, w, h); g.fill(); g.stroke();
       const fs = Math.max(8, Math.min(16, s * 0.55)); g.font = `600 ${fs}px system-ui`; g.fillStyle = '#e8f1f5'; g.textAlign = 'center'; g.textBaseline = 'middle';
       let label = n.replace(/ area$/, ''); const maxc = Math.max(6, Math.floor(w / (fs * 0.55))); if (label.length > maxc) label = label.slice(0, maxc - 1) + '…';
@@ -1581,7 +1581,13 @@ function mergeRooms(src, dst) {
 function moveToArea(r, name) { moveRoomsToArea([r], name); }
 function moveRoomsToArea(list, name, opts) {
   opts = opts || {};
-  name = (name || '').trim(); list = list.filter(r => r.area !== name); if (!name || !list.length) return; pushUndo();
+  name = (name || '').trim(); if (!name) return;
+  list = list.filter(r => r.area !== name);
+  if (!list.length) {   // the rooms are already in that area: just apply the type / parent to the area
+    if ((opts.roads || opts.parent) && S.world.areas.has(name)) { pushUndo(); const m = metaOf(name); if (opts.roads) { m.kind = 'roads'; m.collapsed = false; } if (opts.parent && opts.parent !== name) m.parent = opts.parent; S.multi.clear(); refresh(); status(`"${name}" is now ${opts.roads ? 'a Roads area' : 'a sub-area'}`); say(`<b>${esc(name)}</b> is now ${opts.roads ? 'a Roads area (all levels flat, open on the world map)' : 'a sub-area'}.`, 'sys'); }
+    return;
+  }
+  pushUndo();
   const exists = S.world.areas.has(name); const dst = exists ? S.world.areas.get(name).slice() : [];
   let x0 = 1e9, y0 = 1e9; list.forEach(r => { x0 = Math.min(x0, r.x); y0 = Math.min(y0, r.y); });
   let ox = -x0, oy = -y0; if (dst.length) { let mx = -1e9, my = 1e9; dst.forEach(r => { mx = Math.max(mx, r.x); my = Math.min(my, r.y); }); ox = mx + 3 - x0; oy = my - y0; }
@@ -1593,7 +1599,8 @@ function moveRoomsToArea(list, name, opts) {
   if (opts.parent && opts.parent !== name) S.meta[name].parent = opts.parent;
   if (!exists) placeFree(name);
   S.multi.clear(); if (!S.world.areas.has(S.area)) S.area = list[0].area; refresh();
-  status(`${list.length} room(s) moved to "${name}"`);
+  status(`${list.length} room(s) moved to "${name}"${opts.roads ? ' — Roads area' : ''}`);
+  if (opts.roads) say(`<b>${esc(name)}</b> is now a Roads area: ${list.length} room(s), all levels shown flat, open on the world map.`, 'sys');
 }
 // put an area's tile/box where it overlaps nothing, as close to where it was proposed as possible
 function placeFree(name) {
@@ -1662,6 +1669,7 @@ function renderEdit() {
       + `<div class="row"><input id="mv_new" placeholder="or type a new area name" size="22"><button data-e="mv-go">Assign to area</button></div>`
       + `<div class="row">as a sub-area of <select id="mv_parent"><option value="">(none)</option>${areas.map(n => `<option>${esc(n)}</option>`).join('')}</select></div>`
       + `<div class="row"><label><input type="checkbox" id="mv_roads"> make it a Roads area (shown open on the world map)</label></div>`
+      + `<div class="row"><button data-e="mv-roads">Make these a Roads area</button><span class="dim">uses the name above, or "Roads"</span></div>`
       + `<div class="row">Flag all selected: <select id="mv_flag">${FLAG_MAIN.concat(FLAG_MORE).map(f => `<option>${f}</option>`).join('')}</select><button data-e="mv-fset">Set</button><button data-e="mv-fclr">Clear</button></div>`
       + `<div class="row"><button data-e="mv-same">Add every room with the same title</button><button data-e="mv-clear">Clear selection</button></div>`;
   }
@@ -1689,6 +1697,7 @@ $('edit').addEventListener('click', ev => {
   const b = ev.target.closest('[data-e]'); if (!b) return; const a = b.dataset.e, r = S.sel, d = b.dataset.d;
   if (a === 'undo') return undo();
   if (a === 'mv-fset' || a === 'mv-fclr') { const f = $('mv_flag').value; pushUndo(); S.multi.forEach(r => { if (a === 'mv-fset') r.flags[f] = true; else delete r.flags[f]; }); refresh(); status(`${f} ${a === 'mv-fset' ? 'set on' : 'cleared from'} ${S.multi.size} room(s)`); return; }
+  if (a === 'mv-roads') { const n = ($('mv_new').value.trim() || $('mv_sel').value || 'Roads'); return moveRoomsToArea([...S.multi], n, { roads: true, parent: $('mv_parent').value }); }
   if (a === 'mv-clear') { S.multi.clear(); renderEdit(); return draw(); }
   if (a === 'mv-go') { const n = ($('mv_new').value.trim() || $('mv_sel').value); if (!n) { alert('Pick an area or type a new name.'); return; } return moveRoomsToArea([...S.multi], n, { roads: $('mv_roads').checked, parent: $('mv_parent').value }); }
   if (a === 'mv-same') { const ts = new Set([...S.multi].map(r => r.title)); S.world.rooms.forEach(r => { if (ts.has(r.title)) S.multi.add(r); }); renderEdit(); draw(); return status(S.multi.size + ' room(s) selected'); }
