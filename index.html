@@ -34,7 +34,7 @@ footer{grid-column:1/4;background:#151b24;border-top:1px solid #26303c;padding:3
 <header><h1>Arctic Map Builder</h1>
 <button id="btnLogs">Add logs / maps…</button><input type="file" id="fileLogs" multiple hidden>
 <label>Name <input id="base" value="log" size="10"></label>
-<label><input type="checkbox" id="auto" checked> auto areas</label>
+<label title="splits only big maps (250+ rooms) into areas; smaller maps stay as one area"><input type="checkbox" id="auto" checked> auto areas (big maps)</label>
 <label title="higher = more, smaller areas">split <input type="range" id="gamma" min="0.03" max="0.6" step="0.01" value="0.15"></label>
 <span style="flex:1"></span><button id="btnOpenW">Open world file…</button><input type="file" id="fileWorld" hidden><button id="btnSave">Save world file</button><button id="rwinBtn">Room window</button><button id="btnZip">Export maps (.zip)</button><button id="btnClear">New world</button><button id="aboutBtn" title="about, privacy and credits">About</button></header>
 <div id="side"><div class="tabs"><div class="tab on" data-pane="p1">Build</div><div class="tab" data-pane="p2">Review</div><div class="tab" data-pane="p3">Rooms</div><div class="tab" data-pane="p4">Edit</div><div class="tab" data-pane="p5">Dupes</div></div>
@@ -164,6 +164,7 @@ function parseLog(text, opt) {
   const extraTitles = opt.titles ? new Set(opt.titles) : null;
   const isTitle = t => titles.has(t) || (extraTitles && extraTitles.has(t));
 
+  const pendingDirs = [];   // a typed move whose room only shows up in a later block (door opened first, spell messages in between)
   const events = []; const stats = { prompts: blocks.length - 1, follow: 0, own: 0, typed: 0, alas: 0, lines: lines.length };
   for (let bi = 0; bi < blocks.length; bi++) {
     const b = blocks[bi];
@@ -180,6 +181,7 @@ function parseLog(text, opt) {
         if (j >= 0) arr.push({ k: j, dir: m[2], via: 'follow', who: m[1], follow: k });
       }
     }
+    if (bi === 0 || ls.some(l => BREAK_RE.test(l))) pendingDirs.length = 0;
     let typedCmd = b.tail || '';
     if (!typedCmd && ls.length && WORD_DIR[ls[0].trim().toLowerCase()]) typedCmd = ls[0].trim();   // the typed command on a line of its own
     if (!arr.length) for (let k = 0; k < ls.length; k++) if (isDescTitle(ls, k)) arr.push({ k, dir: null, via: 'own' });
@@ -197,13 +199,20 @@ function parseLog(text, opt) {
       const ctx = []; for (let k = Math.max(0, (a.follow !== undefined ? a.follow : a.k) - 3); k < a.k; k++) if (ls[k].trim()) ctx.push(ls[k].trim());
       const title = ls[a.k].trim();
       let dir = a.dir, via = a.via;
-      if (!dir && arr.length === 1 && typedCmd && WORD_DIR[typedCmd.toLowerCase()]) { dir = WORD_DIR[typedCmd.toLowerCase()]; via = 'typed'; }
+      if (!dir && arr.length === 1 && typedCmd && WORD_DIR[typedCmd.toLowerCase()]) { dir = WORD_DIR[typedCmd.toLowerCase()]; via = 'typed'; pendingDirs.length = 0; }
+      else if (!dir) {
+        while (pendingDirs.length && bi - pendingDirs[0].bi > 3) pendingDirs.shift();
+        if (pendingDirs.length && arr.length === 1) { dir = pendingDirs.shift().dir; via = 'typed'; }
+      }
       const ev = { type: dir ? 'arrive' : 'display', dir, via, title, desc: grabDesc(ls, a.k), line: b.at + 1 + a.k, ctx, cmd: (!dir && typedCmd) ? typedCmd : '',
                    exits: last && hasNext ? parseExits(nextExits) : { dirs: new Set(), closed: new Set(), known: false } };
       if (via === 'follow') stats.follow++; else if (via === 'typed') stats.typed++; else stats.own++;
       events.push(ev);
     }
-    if (!arr.length && ls.some(l => /^Alas, you cannot go that way/.test(l))) { stats.alas++; }
+    if (!arr.length) {
+      if (ls.some(l => /^Alas, you cannot go that way/.test(l))) { stats.alas++; pendingDirs.length = 0; }
+      else if (typedCmd && WORD_DIR[typedCmd.toLowerCase()] && !ls.some(l => /seems to be closed|is locked|cannot|can't|too exhausted|are fighting|You are (resting|sitting|sleeping)/.test(l))) { pendingDirs.push({ dir: WORD_DIR[typedCmd.toLowerCase()], bi }); if (pendingDirs.length > 2) pendingDirs.shift(); }
+    }
   }
   return { events, stats, titles: [...titles.keys()] };
 }
@@ -579,6 +588,7 @@ function louvain(n, edges, gamma) {
 
 function autoAreas(rooms, baseName, opt) {
   opt = opt || {};
+  if (rooms.length < (opt.minTotal === undefined ? 250 : opt.minTotal)) return false;   // a small map is one area: splitting a road or a town into pieces only makes a mess
   const idx = new Map(); rooms.forEach((r, i) => idx.set(r.id, i));
   const seen = new Set(); const edges = [];
   for (const r of rooms) for (const d of DIRS) {
@@ -796,7 +806,7 @@ async function runImport() {
   if (!seeded && S.auto) C.autoAreas(b.rooms, S.base, { gamma: S.gamma, minSize: 8 });
   if (seeded && S.auto) {   // a big batch of ground that connects to nothing known: split it into areas too (rooms attached to known areas stay in them)
     const isl = b.rooms.filter(r => !r.seeded && r.area === S.base + ' new rooms');
-    if (isl.length >= 30) C.autoAreas(isl, S.base, { gamma: S.gamma, minSize: 8, taken: [...new Set(b.rooms.filter(r => r.seeded).map(r => r.area))] });
+    if (isl.length >= 250) C.autoAreas(isl, S.base, { gamma: S.gamma, minSize: 8, taken: [...new Set(b.rooms.filter(r => r.seeded).map(r => r.area))] });
   }
   S.origins = {}; for (const r of b.rooms) { const o = S.origins[r.area] || (S.origins[r.area] = { x: 1e9, y: 1e9 }); o.x = Math.min(o.x, r.x); o.y = Math.min(o.y, r.y); }
   const w = C.finalizeWorld(b.rooms, b.byId);
